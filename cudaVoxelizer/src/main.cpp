@@ -14,7 +14,8 @@
 
 const std::string PROGRAM_NAME = "#CudaVoxelizer - ";
 
-bool loadMesh(const std::experimental::filesystem::path& file_path, Mesh& m, std::string& log_msg);
+bool loadMesh(const std::experimental::filesystem::path& file_path, Mesh::Mesh& m, std::string& log_msg);
+Mesh::VoxelGrid computeVoxelGrid(const Mesh::Mesh& m, const unsigned int size);
 
 int main(int argc, char *argv[]) {
 	std::string msg{};
@@ -29,23 +30,27 @@ int main(int argc, char *argv[]) {
 
 	std::cout << PROGRAM_NAME << "Loading mesh from " << filepath.filename().string() << "..." << std::endl;
 
-	Mesh m{};
+	Mesh::Mesh m{};
 	if (!loadMesh(filepath, m, msg)) {
 		std::cerr << PROGRAM_NAME << msg;
 		return 1;
 	}
 
-	std::cout << PROGRAM_NAME << filepath.filename().string() << " (" << m.faces_idx.size() << " triangles) succesfully loaded..." << std::endl;
+	std::cout << PROGRAM_NAME << filepath.filename().string() << " succesfully loaded..." << std::endl;
+	std::cout << "\t" << filepath.filename().string() << " triangles: " << m.faces_idx.size() << std::endl;
+	std::cout << "\t" << filepath.filename().string() << " verticies: " << m.vertices.size() << std::endl;
 
-	std::cout << PROGRAM_NAME << m.get_AABBox() << std::endl;
+	std::cout << PROGRAM_NAME << "Creating voxel grid..." << std::endl;
+	Mesh::VoxelGrid v_grid = computeVoxelGrid(m, 64);
 
-
+	std::cout << v_grid.aabb << " spacing " << v_grid.spacing << std::endl;
+	std::cout << v_grid.aabb.get_length_x() << "\t" << v_grid.aabb.get_length_y() << "\t" << v_grid.aabb.get_length_z() << std::endl;
 
 	std::cin.get();
 	return 0;
 }
 
-bool loadMesh(const std::experimental::filesystem::path& file_path, Mesh& m, std::string& msg) {
+bool loadMesh(const std::experimental::filesystem::path& file_path, Mesh::Mesh& m, std::string& msg) {
 	std::string line{};
 	std::ifstream fs{};
 	std::string token{};
@@ -155,3 +160,53 @@ bool loadMesh(const std::experimental::filesystem::path& file_path, Mesh& m, std
 	return ok;
 }
 
+Mesh::VoxelGrid computeVoxelGrid(const Mesh::Mesh& m, const unsigned int size) {
+	Mesh::AABBox bbox{};
+
+	// Retrieve the AABB of the mesh
+	bbox = m.get_AABBox();
+
+	// Compute the BBOx length along each axis
+	float x_len = bbox.get_length_x();
+	float y_len = bbox.get_length_y();
+	float z_len = bbox.get_length_z();
+
+	// Retrieve the maximum length across the 3 axes
+	// NOTE: this is done in order to have a cube that will contain the whole mesh
+	float max_length = std::max(x_len, std::max(y_len, z_len));
+
+	// BBox X-axis length is not the longest, so we need to enlarge it to obtain a cube
+	if (max_length != x_len) {
+		// Compute the distance between the longest axis and the BBox X-axis
+		float delta = max_length - x_len;
+		
+		// Shift the X coord of the minimum and maximum vertices of the BBox
+		bbox.p_min[0] = bbox.p_min[0] - (delta / 2.0f);
+		bbox.p_max[0] = bbox.p_max[0] + (delta / 2.0f);
+	}
+
+	// BBox Y-axis length is not the longest, so we need to enlarge it to obtain a cube
+	if (max_length != y_len) {
+		// Compute the distance between the longest axis and the BBox Y-axis
+		float delta = max_length - y_len;
+
+		// Shift the Y coord of the minimum and maximum vertices of the BBox
+		bbox.p_min[1] = bbox.p_min[1] - (delta / 2.0f);
+		bbox.p_max[1] = bbox.p_max[1] + (delta / 2.0f);
+	}
+
+	// BBox Z-axis length is not the longest, so we need to enlarge it to obtain a cube
+	if (max_length != z_len) {
+		// Compute the distance between the longest axis and the BBox Z-axis
+		float delta = max_length - z_len;
+
+		// Shift the Z coord of the minimum and maximum vertices of the BBox
+		bbox.p_min[2] = bbox.p_min[2] - (delta / 2.0f);
+		bbox.p_max[2] = bbox.p_max[2] + (delta / 2.0f);
+	}
+
+	// Compute the spacing between 
+	float spacing = (bbox.p_max - bbox.p_min)[0] / (float)size;
+
+	return Mesh::VoxelGrid{ bbox, size, size, size, spacing };
+}

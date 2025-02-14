@@ -3,17 +3,17 @@
 #include <vector>
 #include <array>
 
-Mesh::Mesh() : vertices{}, faces_idx{}, normals{}, tex_coords{}, tex_idx{} {}
-Mesh::Mesh(std::vector<Vec3::Vec3> vert, std::vector<Vec3::Vec3i> face_idx) : vertices{ vert }, faces_idx{ face_idx }, normals{}, tex_coords{}, tex_idx{} {
+Mesh::Mesh::Mesh() : vertices{}, faces_idx{}, normals{}, tex_coords{}, tex_idx{} {}
+Mesh::Mesh::Mesh(const std::vector<Vec3::Vec3> vert, const std::vector<Vec3::Vec3i> face_idx) : vertices{ vert }, faces_idx{ face_idx }, normals{}, tex_coords{}, tex_idx{} {
 	this->compute_normals();
 }
-Mesh::Mesh(std::vector<Vec3::Vec3> vert, std::vector<Vec3::Vec3i> face_idx, std::vector<Vec2::Vec2> tex, std::vector<Vec3::Vec3i> tex_idx) : vertices{ vert }, faces_idx{ face_idx }, normals{}, tex_coords{ tex }, tex_idx{ tex_idx } {
+Mesh::Mesh::Mesh(const std::vector<Vec3::Vec3> vert, const std::vector<Vec3::Vec3i> face_idx, const std::vector<Vec2::Vec2> tex, const std::vector<Vec3::Vec3i> tex_idx) : vertices{ vert }, faces_idx{ face_idx }, normals{}, tex_coords{ tex }, tex_idx{ tex_idx } {
 	this->compute_normals();
 }
-Mesh::Mesh(Mesh&& other) noexcept : vertices{ std::move(other.vertices) }, faces_idx{ std::move(other.faces_idx) }, normals{ std::move(other.normals) }, tex_coords{ std::move(other.tex_coords) }, tex_idx{ std::move(other.tex_idx) } {}
-Mesh::Mesh(const Mesh& other) : vertices{ other.vertices }, faces_idx{ other.faces_idx }, normals{ other.normals }, tex_coords{ other.tex_coords }, tex_idx{ other.tex_idx } {}
+Mesh::Mesh::Mesh(Mesh&& other) noexcept : vertices{ std::move(other.vertices) }, faces_idx{ std::move(other.faces_idx) }, normals{ std::move(other.normals) }, tex_coords{ std::move(other.tex_coords) }, tex_idx{ std::move(other.tex_idx) } {}
+Mesh::Mesh::Mesh(const Mesh& other) : vertices{ other.vertices }, faces_idx{ other.faces_idx }, normals{ other.normals }, tex_coords{ other.tex_coords }, tex_idx{ other.tex_idx } {}
 
-std::vector <std::array<Vec3::Vec3, 3>> const Mesh::get_faces() {
+std::vector <std::array<Vec3::Vec3, 3>> Mesh::Mesh::get_faces() const {
 	std::vector<std::array<Vec3::Vec3, 3>> faces{};
 
 	faces.reserve(this->faces_idx.size());
@@ -28,7 +28,7 @@ std::vector <std::array<Vec3::Vec3, 3>> const Mesh::get_faces() {
 	return faces;
 }
 
-void Mesh::compute_normals() {
+void Mesh::Mesh::compute_normals() {
 	Vec3::Vec3 norms[3] = { Vec3::Vec3{}, Vec3::Vec3{}, Vec3::Vec3{} };
 	Vec3::Vec3 v1{};
 	Vec3::Vec3 v2;
@@ -51,7 +51,7 @@ void Mesh::compute_normals() {
 	return;
 }
 
-void Mesh::append(const Mesh& m) {
+void Mesh::Mesh::append(const Mesh& m) {
 	const unsigned int offset = (unsigned int)this->vertices.size();
 
 	this->vertices.insert(this->vertices.end(), m.vertices.begin(), m.vertices.end());
@@ -67,7 +67,7 @@ void Mesh::append(const Mesh& m) {
 	return;
 }
 
-AABBox Mesh::get_AABBox() {
+Mesh::AABBox Mesh::Mesh::get_AABBox() const {
 	Vec3::Vec3 v_min{ vertices[0] };
 	Vec3::Vec3 v_max{ vertices[0] };
 
@@ -83,7 +83,7 @@ AABBox Mesh::get_AABBox() {
 	return AABBox{ v_min, v_max };
 }
 
-Mesh& Mesh::operator=(const Mesh& m) {
+Mesh::Mesh& Mesh::Mesh::operator=(const Mesh& m) {
 	this->vertices = m.vertices;
 	this->faces_idx = m.faces_idx;
 	this->normals = m.normals;
@@ -92,7 +92,7 @@ Mesh& Mesh::operator=(const Mesh& m) {
 	return *this;
 }
 
-Mesh& Mesh::operator=(Mesh&& m) noexcept {
+Mesh::Mesh& Mesh::Mesh::operator=(Mesh&& m) noexcept {
 	if (this != &m) {
 		this->vertices = std::move(m.vertices);
 		this->faces_idx = std::move(m.faces_idx);
@@ -103,9 +103,13 @@ Mesh& Mesh::operator=(Mesh&& m) noexcept {
 	return *this;
 }
 
-AABBox::AABBox() : p_min{ Vec3::Vec3{ 1.f, 1.f, 1.f } }, p_max{ Vec3::Vec3{ 1.f, 1.f, 1.f } } {}
-AABBox::AABBox(Vec3::Vec3 p_min, Vec3::Vec3 p_max) : p_min{ p_min }, p_max{ p_max } {}
+Mesh::AABBox::AABBox() : p_min{ Vec3::Vec3{ 1.f, 1.f, 1.f } }, p_max{ Vec3::Vec3{ 1.f, 1.f, 1.f } } {}
+Mesh::AABBox::AABBox(const Vec3::Vec3 p_min, const Vec3::Vec3 p_max) : p_min{ p_min }, p_max{ p_max } {}
 
-float AABBox::get_length_x() { return p_max[0] - p_min[0]; }
-float AABBox::get_length_y() { return p_max[1] - p_min[1]; }
-float AABBox::get_length_z() { return p_max[2] - p_min[2]; }
+float Mesh::AABBox::get_length_x() const { return p_max[0] - p_min[0]; }
+float Mesh::AABBox::get_length_y() const { return p_max[1] - p_min[1]; }
+float Mesh::AABBox::get_length_z() const { return p_max[2] - p_min[2]; }
+
+Mesh::VoxelGrid::VoxelGrid() : aabb{ AABBox{} }, dim_x{ 1 }, dim_y{ 1 }, dim_z{ 1 }, spacing{ 1.f } {}
+Mesh::VoxelGrid::VoxelGrid(const AABBox bbox, const unsigned int dim_x, const unsigned int dim_y, const unsigned int dim_z, const float spacing) 
+	: aabb{ bbox }, dim_x{ dim_x }, dim_y{ dim_y }, dim_z{ dim_z }, spacing{ spacing } {}
