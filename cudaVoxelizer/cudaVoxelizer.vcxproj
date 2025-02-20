@@ -11,11 +11,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\CpuVoxelizer.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Mesh.cpp" />
+    <ClCompile Include="src\util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\CpuVoxelizer.h" />
     <ClInclude Include="src\Mesh.h" />
+    <ClInclude Include="src\util.h" />
     <ClInclude Include="src\Vec2.h" />
     <ClInclude Include="src\Vec3.h" />
   </ItemGroup>

@@ -18,6 +18,15 @@ namespace Vec3
 		float operator[](unsigned int i) const { return coords[i]; }
 		float& operator[](unsigned int i) { return coords[i]; }
 
+		Vec3& operator=(const Vec3& v) {
+			if (this == &v)
+				return *this;
+			coords[0] = v[0];
+			coords[1] = v[1];
+			coords[2] = v[2];
+			return *this;
+		}
+
 		Vec3& operator+=(const Vec3& v) {
 			coords[0] += v.x();
 			coords[1] += v.y();
@@ -46,26 +55,26 @@ namespace Vec3
 
 	typedef struct Vec3i {
 		Vec3i() : elem{ 0, 0, 0 } {}
-		Vec3i(const unsigned int x, const unsigned int y, const unsigned int z) : elem{ x, y, z } {}
+		Vec3i(const int x, const int y, const int z) : elem{ x, y, z } {}
 
-		unsigned int operator[](const unsigned int i) const { return elem[i]; }
-		unsigned int& operator[](const unsigned int i) { return elem[i]; }
+		int operator[](const int i) const { return elem[i]; }
+		int& operator[](const int i) { return elem[i]; }
 
-		Vec3i& operator+=(const unsigned int x) {
+		Vec3i& operator+=(const int x) {
 			elem[0] += x;
 			elem[1] += x;
 			elem[2] += x;
 			return *this;
 		}
 
-		Vec3i& operator-=(const unsigned int x) {
+		Vec3i& operator-=(const int x) {
 			elem[0] -= x;
 			elem[1] -= x;
 			elem[2] -= x;
 			return *this;
 		}
 
-		unsigned int elem[3];
+		int elem[3];
 	} Vec3i;
 
 	inline std::ostream& operator<<(std::ostream& out, const Vec3& v) {
@@ -104,5 +113,13 @@ namespace Vec3
 
 	inline Vec3 unit_vector(const Vec3& v) {
 		return v / v.length();
+	}
+
+	inline Vec3 min(const Vec3& v1, const Vec3& v2) {
+		return Vec3{ std::min(v1[0], v2[0]), std::min(v1[1], v2[1]), std::min(v1[2], v2[2])};
+	}
+
+	inline Vec3 max(const Vec3& v1, const Vec3& v2) {
+		return Vec3{ std::max(v1[0], v2[0]), std::max(v1[1], v2[1]), std::max(v1[2], v1[2]) };
 	}
 }

@@ -9,7 +9,18 @@
 
 namespace Mesh {
 
-	struct AABBox;
+	template <typename T> struct AABBox {
+		AABBox<T>() : p_min{ T{} }, p_max{ T{} } {};
+		AABBox<T>(const T p_min, const T p_max) : p_min{ p_min }, p_max{ p_max } {};
+
+		T p_min;
+		T p_max;
+	};
+
+	template <typename T> inline std::ostream& operator<<(std::ostream& os, const AABBox<T>& aabb) {
+		os << "Min: " << aabb.p_min << "\tMax: " << aabb.p_max;
+		return os;
+	}
 
 	class Mesh {
 	public:
@@ -22,7 +33,7 @@ namespace Mesh {
 		std::vector<std::array<Vec3::Vec3, 3>> get_faces() const;
 		void compute_normals();
 		void append(const Mesh& m);
-		AABBox get_AABBox() const;
+		AABBox<Vec3::Vec3> get_AABBox() const;
 
 		Mesh& operator=(const Mesh& m);
 		Mesh& operator=(Mesh&& m) noexcept;
@@ -30,34 +41,16 @@ namespace Mesh {
 		std::vector<Vec3::Vec3> vertices;
 		std::vector<Vec3::Vec3i> faces_idx;
 		std::vector<Vec3::Vec3> normals;
-		std::vector<Vec3::Vec3i> normal_idx;
 		std::vector<Vec2::Vec2> tex_coords;
 		std::vector<Vec3::Vec3i> tex_idx;
 	};
 
-	struct AABBox {
-		AABBox();
-		AABBox(const Vec3::Vec3 p_min, const Vec3::Vec3 p_max);
-
-		float get_length_x() const;
-		float get_length_y() const;
-		float get_length_z() const;
-
-		Vec3::Vec3 p_min;
-		Vec3::Vec3 p_max;
-	};
-
-	inline std::ostream& operator<<(std::ostream& os, const AABBox& aabb) {
-		os << "Min: " << aabb.p_min << "\tMax: " << aabb.p_max;
-		return os;
-	}
-
 	struct VoxelGrid {
 		VoxelGrid();
-		VoxelGrid(const AABBox bbox, const unsigned int dim_x, const unsigned int dim_y, const unsigned int dim_z, const float spacing);
+		VoxelGrid(const AABBox<Vec3::Vec3> bbox, const int dim_x, const int dim_y, const int dim_z, const Vec3::Vec3 spacing);
 
-		AABBox aabb;
-		unsigned int dim_x, dim_y, dim_z;
-		float spacing;
+		AABBox<Vec3::Vec3> aabb;
+		int dim_x, dim_y, dim_z;
+		Vec3::Vec3 spacing;
 	};
 }

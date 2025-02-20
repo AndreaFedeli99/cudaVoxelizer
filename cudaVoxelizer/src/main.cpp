@@ -1,6 +1,9 @@
 #include "Vec3.h"
 #include "Mesh.h"
 
+#include "CpuVoxelizer.h"
+#include "util.h"
+
 /*
 * Disable error/warnings when using experimental/filesystem library
 */
@@ -15,7 +18,7 @@
 const std::string PROGRAM_NAME = "#CudaVoxelizer - ";
 
 bool loadMesh(const std::experimental::filesystem::path& file_path, Mesh::Mesh& m, std::string& log_msg);
-Mesh::VoxelGrid computeVoxelGrid(const Mesh::Mesh& m, const unsigned int size);
+Mesh::VoxelGrid computeVoxelGrid(const Mesh::Mesh& m, const int size);
 
 int main(int argc, char *argv[]) {
 	std::string msg{};
@@ -37,14 +40,23 @@ int main(int argc, char *argv[]) {
 	}
 
 	std::cout << PROGRAM_NAME << filepath.filename().string() << " succesfully loaded..." << std::endl;
-	std::cout << "\t" << filepath.filename().string() << " triangles: " << m.faces_idx.size() << std::endl;
-	std::cout << "\t" << filepath.filename().string() << " verticies: " << m.vertices.size() << std::endl;
+	std::cout << "\tNumber of triangles: " << m.faces_idx.size() << std::endl;
+	std::cout << "\tNumber of verticies: " << m.vertices.size() << std::endl;
 
 	std::cout << PROGRAM_NAME << "Creating voxel grid..." << std::endl;
-	Mesh::VoxelGrid v_grid = computeVoxelGrid(m, 64);
+	Mesh::VoxelGrid v_grid = computeVoxelGrid(m, 128);
 
-	std::cout << v_grid.aabb << " spacing " << v_grid.spacing << std::endl;
-	std::cout << v_grid.aabb.get_length_x() << "\t" << v_grid.aabb.get_length_y() << "\t" << v_grid.aabb.get_length_z() << std::endl;
+	std::cout << PROGRAM_NAME << "Starting CPU voxelization..." << std::endl;
+	bool* v_table = (bool*)calloc(size_t(v_grid.dim_x) * size_t(v_grid.dim_y) * (size_t)(v_grid.dim_z), sizeof(bool));
+	CpuVoxelizer::voxelizeMesh(v_grid, m, v_table);
+	std::cout << PROGRAM_NAME << "CPU voxelization ended..." << std::endl;
+
+	std::cout << PROGRAM_NAME << "Saving voxel mesh as .obj..." << std::endl;
+	util::saveObj(v_table, v_grid, vox_filename);
+	std::cout << PROGRAM_NAME << "Voxel mesh saved..." << std::endl;
+
+	// Free the voxel table
+	free(v_table);
 
 	std::cin.get();
 	return 0;
@@ -160,16 +172,16 @@ bool loadMesh(const std::experimental::filesystem::path& file_path, Mesh::Mesh& 
 	return ok;
 }
 
-Mesh::VoxelGrid computeVoxelGrid(const Mesh::Mesh& m, const unsigned int size) {
-	Mesh::AABBox bbox{};
+Mesh::VoxelGrid computeVoxelGrid(const Mesh::Mesh& m, const int size) {
+	Mesh::AABBox<Vec3::Vec3> bbox{};
 
 	// Retrieve the AABB of the mesh
 	bbox = m.get_AABBox();
 
 	// Compute the BBOx length along each axis
-	float x_len = bbox.get_length_x();
-	float y_len = bbox.get_length_y();
-	float z_len = bbox.get_length_z();
+	float x_len = bbox.p_max[0] - bbox.p_min[0];
+	float y_len = bbox.p_max[1] - bbox.p_min[1];
+	float z_len = bbox.p_max[2] - bbox.p_min[2];
 
 	// Retrieve the maximum length across the 3 axes
 	// NOTE: this is done in order to have a cube that will contain the whole mesh
@@ -205,8 +217,15 @@ Mesh::VoxelGrid computeVoxelGrid(const Mesh::Mesh& m, const unsigned int size) {
 		bbox.p_max[2] = bbox.p_max[2] + (delta / 2.0f);
 	}
 
+	Vec3::Vec3 err = (bbox.p_max - bbox.p_min) / 10001.f;
+	bbox.p_min = bbox.p_min - err;
+	bbox.p_max = bbox.p_max + err;
+
 	// Compute the spacing between 
-	float spacing = (bbox.p_max - bbox.p_min)[0] / (float)size;
+	Vec3::Vec3 spacing{};
+	spacing[0] = (bbox.p_max[0] - bbox.p_min[0]) / (float)size;
+	spacing[1] = (bbox.p_max[1] - bbox.p_min[1]) / (float)size;
+	spacing[2] = (bbox.p_max[2] - bbox.p_min[2]) / (float)size;
 
 	return Mesh::VoxelGrid{ bbox, size, size, size, spacing };
 }

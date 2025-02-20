@@ -56,18 +56,21 @@ void Mesh::Mesh::append(const Mesh& m) {
 
 	this->vertices.insert(this->vertices.end(), m.vertices.begin(), m.vertices.end());
 	this->faces_idx.insert(this->faces_idx.end(), m.faces_idx.begin(), m.faces_idx.end());
+	this->normals.insert(this->normals.end(), m.normals.begin(), m.normals.end());
 	this->tex_coords.insert(this->tex_coords.end(), m.tex_coords.begin(), m.tex_coords.end());
 	this->tex_idx.insert(this->tex_idx.end(), m.tex_idx.begin(), m.tex_idx.end());
 
 	for (size_t i = this->faces_idx.size() - m.faces_idx.size(); i < this->faces_idx.size(); ++i) {
 		this->faces_idx[i] += offset;
-		this->tex_idx[i] += offset;
+		
+		if (this->tex_idx.size() > 0)
+			this->tex_idx[i] += offset;
 	}
 
 	return;
 }
 
-Mesh::AABBox Mesh::Mesh::get_AABBox() const {
+Mesh::AABBox<Vec3::Vec3> Mesh::Mesh::get_AABBox() const {
 	Vec3::Vec3 v_min{ vertices[0] };
 	Vec3::Vec3 v_max{ vertices[0] };
 
@@ -80,7 +83,7 @@ Mesh::AABBox Mesh::Mesh::get_AABBox() const {
 		}
 	}
 
-	return AABBox{ v_min, v_max };
+	return AABBox<Vec3::Vec3>{ v_min, v_max };
 }
 
 Mesh::Mesh& Mesh::Mesh::operator=(const Mesh& m) {
@@ -103,13 +106,6 @@ Mesh::Mesh& Mesh::Mesh::operator=(Mesh&& m) noexcept {
 	return *this;
 }
 
-Mesh::AABBox::AABBox() : p_min{ Vec3::Vec3{ 1.f, 1.f, 1.f } }, p_max{ Vec3::Vec3{ 1.f, 1.f, 1.f } } {}
-Mesh::AABBox::AABBox(const Vec3::Vec3 p_min, const Vec3::Vec3 p_max) : p_min{ p_min }, p_max{ p_max } {}
-
-float Mesh::AABBox::get_length_x() const { return p_max[0] - p_min[0]; }
-float Mesh::AABBox::get_length_y() const { return p_max[1] - p_min[1]; }
-float Mesh::AABBox::get_length_z() const { return p_max[2] - p_min[2]; }
-
-Mesh::VoxelGrid::VoxelGrid() : aabb{ AABBox{} }, dim_x{ 1 }, dim_y{ 1 }, dim_z{ 1 }, spacing{ 1.f } {}
-Mesh::VoxelGrid::VoxelGrid(const AABBox bbox, const unsigned int dim_x, const unsigned int dim_y, const unsigned int dim_z, const float spacing) 
+Mesh::VoxelGrid::VoxelGrid() : aabb{ AABBox<Vec3::Vec3>{} }, dim_x{ 1 }, dim_y{ 1 }, dim_z{ 1 }, spacing{ Vec3::Vec3( 1.f, 1.f, 1.f )} {}
+Mesh::VoxelGrid::VoxelGrid(const AABBox<Vec3::Vec3> bbox, const int dim_x, const int dim_y, const int dim_z, const Vec3::Vec3 spacing) 
 	: aabb{ bbox }, dim_x{ dim_x }, dim_y{ dim_y }, dim_z{ dim_z }, spacing{ spacing } {}
