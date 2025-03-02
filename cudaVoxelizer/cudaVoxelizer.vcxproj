@@ -18,10 +18,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\CpuVoxelizer.h" />
+    <ClInclude Include="src\helper_math.h" />
     <ClInclude Include="src\Mesh.h" />
     <ClInclude Include="src\util.h" />
     <ClInclude Include="src\Vec2.h" />
     <ClInclude Include="src\Vec3.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\Voxelizer.cu" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{08087FF4-5FE9-444B-A04D-3CB0B89113B6}</ProjectGuid>
@@ -79,6 +83,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <CompileOut>$(CudaIntDirFullPath)\%(Filename)%(Extension).obj</CompileOut>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -98,6 +103,7 @@
     </Link>
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <CompileOut>$(CudaIntDirFullPath)\%(Filename)%(Extension).obj</CompileOut>
     </CudaCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

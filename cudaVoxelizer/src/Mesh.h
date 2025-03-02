@@ -3,6 +3,8 @@
 #include <vector>
 #include <array>
 #include <iostream>
+#include <cuda.h>
+#include <cuda_runtime.h>
 
 #include "Vec2.h"
 #include "Vec3.h"
@@ -10,8 +12,8 @@
 namespace Mesh {
 
 	template <typename T> struct AABBox {
-		AABBox<T>() : p_min{ T{} }, p_max{ T{} } {};
-		AABBox<T>(const T p_min, const T p_max) : p_min{ p_min }, p_max{ p_max } {};
+		__host__ __device__ AABBox<T>() : p_min{ T{} }, p_max{ T{} } {};
+		__host__ __device__ AABBox<T>(const T p_min, const T p_max) : p_min{ p_min }, p_max{ p_max } {};
 
 		T p_min;
 		T p_max;

@@ -17,6 +17,8 @@
 
 const std::string PROGRAM_NAME = "#CudaVoxelizer - ";
 
+void kernelWrapper(Mesh::Mesh& m, const Mesh::VoxelGrid& v_grid, unsigned int* v_table, float& time);
+
 bool loadMesh(const std::experimental::filesystem::path& file_path, Mesh::Mesh& m, std::string& log_msg);
 Mesh::VoxelGrid computeVoxelGrid(const Mesh::Mesh& m, const int size);
 
@@ -44,12 +46,21 @@ int main(int argc, char *argv[]) {
 	std::cout << "\tNumber of verticies: " << m.vertices.size() << std::endl;
 
 	std::cout << PROGRAM_NAME << "Creating voxel grid..." << std::endl;
-	Mesh::VoxelGrid v_grid = computeVoxelGrid(m, 128);
+	Mesh::VoxelGrid v_grid = computeVoxelGrid(m, 1024);
+	
+	unsigned int* v_table = (unsigned int*)calloc(size_t(v_grid.dim_x) * size_t(v_grid.dim_y) * (size_t)(v_grid.dim_z), sizeof(unsigned int));
+
+	float elapsed_time{0};
+	std::cout << PROGRAM_NAME << "Starting GPU voxelization..." << std::endl;
+	kernelWrapper(m, v_grid, v_table, elapsed_time);
+	printf("%sGPU voxelization ended...\n\tElapsed time %.1f ms\n", PROGRAM_NAME.c_str(), elapsed_time);
 
 	std::cout << PROGRAM_NAME << "Starting CPU voxelization..." << std::endl;
-	bool* v_table = (bool*)calloc(size_t(v_grid.dim_x) * size_t(v_grid.dim_y) * (size_t)(v_grid.dim_z), sizeof(bool));
+	auto start = std::chrono::high_resolution_clock::now();
 	CpuVoxelizer::voxelizeMesh(v_grid, m, v_table);
-	std::cout << PROGRAM_NAME << "CPU voxelization ended..." << std::endl;
+	auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	printf("%sCPU voxelization ended...\n\tElapsed time %I64d ms\n", PROGRAM_NAME.c_str(), duration);
 
 	std::cout << PROGRAM_NAME << "Saving voxel mesh as .obj..." << std::endl;
 	util::saveObj(v_table, v_grid, vox_filename);
@@ -88,8 +99,11 @@ bool loadMesh(const std::experimental::filesystem::path& file_path, Mesh::Mesh& 
 			std::istringstream ss{ line };
 			ss >> token;
 
+			if (ss.eof()) {
+				continue;
+			}
 			// Vertices
-			if (token == "v") {
+			else if (token == "v") {
 				Vec3::Vec3 vert{};
 				ss >> vert[0] >> vert[1] >> vert[2];
 				m.vertices.push_back(vert);
@@ -178,7 +192,7 @@ Mesh::VoxelGrid computeVoxelGrid(const Mesh::Mesh& m, const int size) {
 	// Retrieve the AABB of the mesh
 	bbox = m.get_AABBox();
 
-	// Compute the BBOx length along each axis
+	// Compute the BBox length along each axis
 	float x_len = bbox.p_max[0] - bbox.p_min[0];
 	float y_len = bbox.p_max[1] - bbox.p_min[1];
 	float z_len = bbox.p_max[2] - bbox.p_min[2];
@@ -216,10 +230,6 @@ Mesh::VoxelGrid computeVoxelGrid(const Mesh::Mesh& m, const int size) {
 		bbox.p_min[2] = bbox.p_min[2] - (delta / 2.0f);
 		bbox.p_max[2] = bbox.p_max[2] + (delta / 2.0f);
 	}
-
-	Vec3::Vec3 err = (bbox.p_max - bbox.p_min) / 10001.f;
-	bbox.p_min = bbox.p_min - err;
-	bbox.p_max = bbox.p_max + err;
 
 	// Compute the spacing between 
 	Vec3::Vec3 spacing{};

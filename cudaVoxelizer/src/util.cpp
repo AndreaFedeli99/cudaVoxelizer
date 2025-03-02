@@ -49,7 +49,7 @@ void util::makeCube(Mesh::Mesh& m, const Vec3::Vec3 v) {
 	}
 }
 
-void util::saveObj(const bool* v_table, const Mesh::VoxelGrid& v_grid, const std::string filename) {
+void util::saveObj(const unsigned int* v_table, const Mesh::VoxelGrid& v_grid, const std::string filename) {
 	Mesh::Mesh voxel_mesh{};
 	Mesh::Mesh cube{};
 

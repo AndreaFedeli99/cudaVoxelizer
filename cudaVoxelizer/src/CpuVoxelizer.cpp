@@ -2,7 +2,7 @@
 
 int clamp(const int min, const int max, const int v);
 
-void CpuVoxelizer::voxelizeMesh(const Mesh::VoxelGrid& v_grid, Mesh::Mesh& m, bool* v_table) {
+void CpuVoxelizer::voxelizeMesh(const Mesh::VoxelGrid& v_grid, Mesh::Mesh& m, unsigned int* v_table) {
 	// For each triangle in the mesh
 	for (size_t i = 0; i < m.vertices.size(); ++i) {
 		// Translate mesh verticies to bbox origin
@@ -60,7 +60,7 @@ void CpuVoxelizer::voxelizeMesh(const Mesh::VoxelGrid& v_grid, Mesh::Mesh& m, bo
 				for (int x = t_bbox_grid.p_min[0]; x <= t_bbox_grid.p_max[0]; ++x) {
 
 					// Compute minimum corner coordinates
-					Vec3::Vec3 p{ x * v_grid.spacing[0], y * v_grid.spacing[1], z * v_grid.spacing[0] };
+					Vec3::Vec3 p{ x * v_grid.spacing[0], y * v_grid.spacing[1], z * v_grid.spacing[2] };
 
 					// Triangle plane overlap test
 					if (((Vec3::dot(n, p) + d1) * (Vec3::dot(n, p) + d2)) > .0f) { continue; }
@@ -75,25 +75,25 @@ void CpuVoxelizer::voxelizeMesh(const Mesh::VoxelGrid& v_grid, Mesh::Mesh& m, bo
 						Vec2::Vec2 e0_proj{ -1.f * edge0[axis1], edge0[axis0] };
 						Vec2::Vec2 e1_proj{ -1.f * edge1[axis1], edge1[axis0] };
 						Vec2::Vec2 e2_proj{ -1.f * edge2[axis1], edge2[axis0] };
-						if (n[axis2] < .0f) {
+						if (n[axis2] < .0f) {	
 							e0_proj = -e0_proj;
 							e1_proj = -e1_proj;
 							e2_proj = -e2_proj;
 						}
 
-						float d_e0 = ( -1.0f * Vec2::dot(e0_proj, Vec2::Vec2{ v0[axis0], v0[axis1] }) ) + std::max(.0f, delta_p[axis0] * e0_proj[axis0]) + std::max(.0f, delta_p[axis1] * e0_proj[axis1]);
-						float d_e1 = ( -1.0f * Vec2::dot(e1_proj, Vec2::Vec2{ v1[axis0], v1[axis1] }) ) + std::max(.0f, delta_p[axis0] * e1_proj[axis0]) + std::max(.0f, delta_p[axis1] * e1_proj[axis1]);
-						float d_e2 = ( -1.0f * Vec2::dot(e2_proj, Vec2::Vec2{ v2[axis0], v2[axis1] }) ) + std::max(.0f, delta_p[axis0] * e2_proj[axis0]) + std::max(.0f, delta_p[axis1] * e2_proj[axis1]);
+						float d_e0 = ( -1.0f * Vec2::dot(e0_proj, Vec2::Vec2{ v0[axis0], v0[axis1] }) ) + std::max(.0f, delta_p[axis0] * e0_proj[0]) + std::max(.0f, delta_p[axis1] * e0_proj[1]);
+						float d_e1 = ( -1.0f * Vec2::dot(e1_proj, Vec2::Vec2{ v1[axis0], v1[axis1] }) ) + std::max(.0f, delta_p[axis0] * e1_proj[0]) + std::max(.0f, delta_p[axis1] * e1_proj[1]);
+						float d_e2 = ( -1.0f * Vec2::dot(e2_proj, Vec2::Vec2{ v2[axis0], v2[axis1] }) ) + std::max(.0f, delta_p[axis0] * e2_proj[0]) + std::max(.0f, delta_p[axis1] * e2_proj[1]);
 
 						// Check if the current triangle overlaps the current voxel
-						Vec2::Vec2 p_proj{ p[j], p[axis1] };
+						Vec2::Vec2 p_proj{ p[axis0], p[axis1] };
 						if (Vec2::dot(e0_proj, p_proj) + d_e0 < .0f) { continue; }
 						if (Vec2::dot(e1_proj, p_proj) + d_e1 < .0f) { continue; }
 						if (Vec2::dot(e2_proj, p_proj) + d_e2 < .0f) { continue; }
 
 						// Set the current voxel as intersected
 						size_t location = (size_t)x + ((size_t)y * (size_t)v_grid.dim_y) + ((size_t)z * (size_t)v_grid.dim_y * (size_t)v_grid.dim_z);
-						v_table[location] = true;
+						v_table[location] = 1;
 					}
 				}
 			}

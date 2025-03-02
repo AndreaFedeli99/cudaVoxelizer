@@ -31,7 +31,7 @@ std::vector <std::array<Vec3::Vec3, 3>> Mesh::Mesh::get_faces() const {
 void Mesh::Mesh::compute_normals() {
 	Vec3::Vec3 norms[3] = { Vec3::Vec3{}, Vec3::Vec3{}, Vec3::Vec3{} };
 	Vec3::Vec3 v1{};
-	Vec3::Vec3 v2;
+	Vec3::Vec3 v2{};
 
 	this->normals.resize(this->vertices.size(), Vec3::Vec3{ .0f, .0f, .0f });
 

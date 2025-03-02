@@ -106,9 +106,9 @@ namespace Vec3
 	}
 
 	inline Vec3 cross(const Vec3& v1, const Vec3& v2) {
-		return Vec3(v1[1] * v2[2] - v1[2] * v2[1],
-					v1[2] * v2[0] - v1[0] * v2[2],
-					v1[0] * v2[1] - v1[1] * v2[0]);
+		return Vec3((v1[1] * v2[2]) - (v1[2] * v2[1]),
+					(v1[2] * v2[0]) - (v1[0] * v2[2]),
+					(v1[0] * v2[1]) - (v1[1] * v2[0]));
 	}
 
 	inline Vec3 unit_vector(const Vec3& v) {
@@ -120,6 +120,6 @@ namespace Vec3
 	}
 
 	inline Vec3 max(const Vec3& v1, const Vec3& v2) {
-		return Vec3{ std::max(v1[0], v2[0]), std::max(v1[1], v2[1]), std::max(v1[2], v1[2]) };
+		return Vec3{ std::max(v1[0], v2[0]), std::max(v1[1], v2[1]), std::max(v1[2], v2[2]) };
 	}
 }
