@@ -16,8 +16,8 @@ inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort =
     }
 }
 
-__global__ void voxelize(float* faces, size_t n_faces, size_t dim_x, size_t dim_y, size_t dim_z, unsigned int* v_table, float3 spacing, float3 bbox_min) {
-    size_t thread_idx = threadIdx.x + blockDim.x * blockIdx.x;
+__global__ void voxelize(float* faces, int n_faces, size_t dim_x, size_t dim_y, size_t dim_z, unsigned int* v_table, float3 spacing, float3 bbox_min) {
+    int thread_idx = threadIdx.x + (blockDim.x * blockIdx.x);
 
     float3 delta_p = make_float3(spacing.x, spacing.y, spacing.z);
     int3 grid_size = make_int3(dim_x - 1, dim_y - 1, dim_z - 1);
@@ -28,9 +28,9 @@ __global__ void voxelize(float* faces, size_t n_faces, size_t dim_x, size_t dim_
         size_t i = thread_idx * 9;
 
         // TRIANGLE INFORMATION
-        float3 v0 = make_float3(faces[i], faces[i + 1], faces[i + 2]) - make_float3(bbox_min.x, bbox_min.y, bbox_min.z);
-        float3 v1 = make_float3(faces[i + 3], faces[i + 4], faces[i + 5]) - make_float3(bbox_min.x, bbox_min.y, bbox_min.z);
-        float3 v2 = make_float3(faces[i + 6], faces[i + 7], faces[i + 8]) - make_float3(bbox_min.x, bbox_min.y, bbox_min.z);
+        float3 v0 = make_float3(faces[i], faces[i + 1], faces[i + 2]) - bbox_min;
+        float3 v1 = make_float3(faces[i + 3], faces[i + 4], faces[i + 5]) - bbox_min;
+        float3 v2 = make_float3(faces[i + 6], faces[i + 7], faces[i + 8]) - bbox_min;
 
         float3 e0 = v1 - v0;
         float3 e1 = v2 - v1;
@@ -43,12 +43,12 @@ __global__ void voxelize(float* faces, size_t n_faces, size_t dim_x, size_t dim_
 
         // Compute current triangle bbox in voxel grid coordinates
         Mesh::AABBox<int3> t_bbox_grid{};
-        t_bbox_grid.p_min = clamp(make_int3(t_bbox.p_min / delta_p), make_int3(0, 0, 0), grid_size);
-        t_bbox_grid.p_max = clamp(make_int3(t_bbox.p_max / delta_p), make_int3(0, 0, 0), grid_size);
+        t_bbox_grid.p_min = clamp(make_int3(t_bbox.p_min / spacing), make_int3(0, 0, 0), grid_size);
+        t_bbox_grid.p_max = clamp(make_int3(t_bbox.p_max / spacing), make_int3(0, 0, 0), grid_size);
 
         // SETUP STAGE
         // Compute critical point
-        float3 c{};
+        float3 c = make_float3(.0f, .0f, .0f);
         if (n.x > .0f) { c.x = delta_p.x; }
         if (n.y > .0f) { c.y = delta_p.y; }
         if (n.z > .0f) { c.z = delta_p.z; }
@@ -62,43 +62,43 @@ __global__ void voxelize(float* faces, size_t n_faces, size_t dim_x, size_t dim_
         float2 e0_xy = make_float2(-1.f * e0.y, e0.x);
         float2 e1_xy = make_float2(-1.f * e1.y, e1.x);
         float2 e2_xy = make_float2(-1.f * e2.y, e2.x);
-        if (n.z < 0.0f) {
+        if (n.z < .0f) {
             e0_xy = -e0_xy;
             e1_xy = -e1_xy;
             e2_xy = -e2_xy;
         }
 
-        float d_e0_xy = (-1.0f * dot(e0_xy, make_float2(v0.x, v0.y)) + max(.0f, delta_p.x * e0_xy.x) + max(.0f, delta_p.y * e0_xy.y));
-        float d_e1_xy = (-1.0f * dot(e1_xy, make_float2(v1.x, v1.y)) + max(.0f, delta_p.x * e1_xy.x) + max(.0f, delta_p.y * e1_xy.y));
-        float d_e2_xy = (-1.0f * dot(e2_xy, make_float2(v2.x, v2.y)) + max(.0f, delta_p.x * e2_xy.x) + max(.0f, delta_p.y * e2_xy.y));
+        float d_e0_xy = ( -1.0f * dot(e0_xy, make_float2(v0.x, v0.y)) ) + fmaxf(.0f, delta_p.x * e0_xy.x) + fmaxf(.0f, delta_p.y * e0_xy.y);
+        float d_e1_xy = ( -1.0f * dot(e1_xy, make_float2(v1.x, v1.y)) ) + fmaxf(.0f, delta_p.x * e1_xy.x) + fmaxf(.0f, delta_p.y * e1_xy.y);
+        float d_e2_xy = ( -1.0f * dot(e2_xy, make_float2(v2.x, v2.y)) ) + fmaxf(.0f, delta_p.x * e2_xy.x) + fmaxf(.0f, delta_p.y * e2_xy.y);
 
         // YZ plane
         float2 e0_yz = make_float2(-1.f * e0.z, e0.y);
         float2 e1_yz = make_float2(-1.f * e1.z, e1.y);
         float2 e2_yz = make_float2(-1.f * e2.z, e2.y);
-        if (n.x < 0.0f) {
+        if (n.x < .0f) {
             e0_yz = -e0_yz;
             e1_yz = -e1_yz;
             e2_yz = -e2_yz;
         }
 
-        float d_e0_yz = (-1.0f * dot(e0_yz, make_float2(v0.y, v0.z)) + max(.0f, delta_p.y * e0_yz.x) + max(.0f, delta_p.z * e0_xy.y));
-        float d_e1_yz = (-1.0f * dot(e1_yz, make_float2(v1.y, v1.z)) + max(.0f, delta_p.y * e1_yz.x) + max(.0f, delta_p.z * e1_xy.y));
-        float d_e2_yz = (-1.0f * dot(e2_yz, make_float2(v2.y, v2.z)) + max(.0f, delta_p.y * e2_yz.x) + max(.0f, delta_p.z * e2_xy.y));
+        float d_e0_yz = ( -1.0f * dot(e0_yz, make_float2(v0.y, v0.z)) ) + fmaxf(.0f, delta_p.y * e0_yz.x) + fmaxf(.0f, delta_p.z * e0_yz.y);
+        float d_e1_yz = ( -1.0f * dot(e1_yz, make_float2(v1.y, v1.z)) ) + fmaxf(.0f, delta_p.y * e1_yz.x) + fmaxf(.0f, delta_p.z * e1_yz.y);
+        float d_e2_yz = ( -1.0f * dot(e2_yz, make_float2(v2.y, v2.z)) ) + fmaxf(.0f, delta_p.y * e2_yz.x) + fmaxf(.0f, delta_p.z * e2_yz.y);
 
         // ZX plane
         float2 e0_zx = make_float2(-1.f * e0.x, e0.z);
         float2 e1_zx = make_float2(-1.f * e1.x, e1.z);
         float2 e2_zx = make_float2(-1.f * e2.x, e2.z);
-        if (n.y < 0.0f) {
+        if (n.y < .0f) {
             e0_zx = -e0_zx;
             e1_zx = -e1_zx;
             e2_zx = -e2_zx;
         }
 
-        float d_e0_zx = (-1.0f * dot(e0_zx, make_float2(v0.z, v0.x)) + max(.0f, delta_p.x * e0_zx.x) + max(.0f, delta_p.z * e0_xy.y));
-        float d_e1_zx = (-1.0f * dot(e1_zx, make_float2(v1.z, v1.x)) + max(.0f, delta_p.x * e1_zx.x) + max(.0f, delta_p.z * e1_xy.y));
-        float d_e2_zx = (-1.0f * dot(e2_zx, make_float2(v2.z, v2.x)) + max(.0f, delta_p.x * e2_zx.x) + max(.0f, delta_p.z * e2_xy.y));
+        float d_e0_zx = ( -1.0f * dot(e0_zx, make_float2(v0.z, v0.x)) ) + fmaxf(.0f, delta_p.x * e0_zx.x) + fmaxf(.0f, delta_p.z * e0_zx.y);
+        float d_e1_zx = ( -1.0f * dot(e1_zx, make_float2(v1.z, v1.x)) ) + fmaxf(.0f, delta_p.x * e1_zx.x) + fmaxf(.0f, delta_p.z * e1_zx.y);
+        float d_e2_zx = ( -1.0f * dot(e2_zx, make_float2(v2.z, v2.x)) ) + fmaxf(.0f, delta_p.x * e2_zx.x) + fmaxf(.0f, delta_p.z * e2_zx.y);
 
         // OVERLAP TEST
         // For each voxel in the triangle bbox
@@ -131,8 +131,8 @@ __global__ void voxelize(float* faces, size_t n_faces, size_t dim_x, size_t dim_
                     if (dot(e2_zx, p_zx) + d_e2_zx < .0f) { continue; }
 
                     // Set the current voxel as intersected
-                    size_t location = (size_t)x + ((size_t)y * (size_t)dim_y) + ((size_t)z * (size_t)dim_y * (size_t)dim_z);
-                    atomicAdd(&(v_table[location]), 1);
+                    size_t location = (size_t)x + ((size_t)y * dim_x) + ((size_t)z * dim_y * dim_x);
+                    v_table[location] = 1;
                 }
             }
         }
@@ -154,9 +154,29 @@ void kernelWrapper(Mesh::Mesh& m, const Mesh::VoxelGrid& v_grid, unsigned int* v
     gpuErrchk(cudaMalloc((void**)&v_table_d, sizeof(unsigned int) * (size_t)v_grid.dim_x * (size_t)v_grid.dim_y * (size_t)v_grid.dim_z));
     gpuErrchk(cudaMemcpy(v_table_d, v_table, sizeof(unsigned int) * (size_t)v_grid.dim_x * (size_t)v_grid.dim_y * (size_t)v_grid.dim_z, cudaMemcpyHostToDevice));
 
+    float* faces = (float*)calloc(m.faces_idx.size() * 9, sizeof(float));
+    for (size_t i = 0; i < m.faces_idx.size(); ++i) {
+        // First vertex
+        faces[(i * 9)] = m.vertices[m.faces_idx[i][0]][0];
+        faces[(i * 9) + 1] = m.vertices[m.faces_idx[i][0]][1];
+        faces[(i * 9) + 2] = m.vertices[m.faces_idx[i][0]][2];
+
+
+        // Second vertex
+        faces[(i * 9) + 3] = m.vertices[m.faces_idx[i][1]][0];
+        faces[(i * 9) + 4] = m.vertices[m.faces_idx[i][1]][1];
+        faces[(i * 9) + 5] = m.vertices[m.faces_idx[i][1]][2];
+
+
+        // Third vertex
+        faces[(i * 9) + 6] = m.vertices[m.faces_idx[i][2]][0];
+        faces[(i * 9) + 7] = m.vertices[m.faces_idx[i][2]][1];
+        faces[(i * 9) + 8] = m.vertices[m.faces_idx[i][2]][2];
+    }
+
     // Setup mesh faces inside GPU
-    //gpuErrchk(cudaMalloc((void**)&faces_d, sizeof(float) * m.faces_idx.size() * 3));
-    //gpuErrchk(cudaMemcpy(faces_d, )));
+    gpuErrchk(cudaMalloc((void**)&faces_d, sizeof(float) * m.faces_idx.size() * 9));
+    gpuErrchk(cudaMemcpy(faces_d, faces, sizeof(float) * m.faces_idx.size() * 9, cudaMemcpyHostToDevice));
 
     // Compute the grid and block dimensions
     dim3 block(32, 1, 1);
@@ -167,14 +187,15 @@ void kernelWrapper(Mesh::Mesh& m, const Mesh::VoxelGrid& v_grid, unsigned int* v
     // Launch the voxelization kernel
     voxelize <<<grid, block>>> (faces_d, m.faces_idx.size(), (size_t)v_grid.dim_x, (size_t)v_grid.dim_y, (size_t)v_grid.dim_z, v_table_d, make_float3(v_grid.spacing[0], v_grid.spacing[1], v_grid.spacing[2]), make_float3(v_grid.aabb.p_min[0], v_grid.aabb.p_min[1], v_grid.aabb.p_min[2]));
     gpuErrchk(cudaDeviceSynchronize());
-
     gpuErrchk(cudaEventRecord(end, 0));
     gpuErrchk(cudaEventSynchronize(end));
     gpuErrchk(cudaEventElapsedTime(&elapsed_time, start, end));
     time = elapsed_time;
 
     // Copy the GPU memory to RAM
+    gpuErrchk(cudaMemcpy(v_table, v_table_d, sizeof(unsigned int) * (size_t)v_grid.dim_x * (size_t)v_grid.dim_y * (size_t)v_grid.dim_z, cudaMemcpyDeviceToHost));
     
     // Free the GPU memory
     gpuErrchk(cudaFree(v_table_d));
+    gpuErrchk(cudaFree(faces_d));
 }

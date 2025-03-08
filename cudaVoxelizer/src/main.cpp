@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 	std::cout << "\tNumber of verticies: " << m.vertices.size() << std::endl;
 
 	std::cout << PROGRAM_NAME << "Creating voxel grid..." << std::endl;
-	Mesh::VoxelGrid v_grid = computeVoxelGrid(m, 1024);
+	Mesh::VoxelGrid v_grid = computeVoxelGrid(m, 512);
 	
 	unsigned int* v_table = (unsigned int*)calloc(size_t(v_grid.dim_x) * size_t(v_grid.dim_y) * (size_t)(v_grid.dim_z), sizeof(unsigned int));
 
@@ -54,6 +54,13 @@ int main(int argc, char *argv[]) {
 	std::cout << PROGRAM_NAME << "Starting GPU voxelization..." << std::endl;
 	kernelWrapper(m, v_grid, v_table, elapsed_time);
 	printf("%sGPU voxelization ended...\n\tElapsed time %.1f ms\n", PROGRAM_NAME.c_str(), elapsed_time);
+
+	std::cout << PROGRAM_NAME << "Saving voxel mesh as .obj..." << std::endl;
+	util::saveObjGPU(v_table, v_grid, vox_filename);
+	std::cout << PROGRAM_NAME << "Voxel mesh saved..." << std::endl;
+
+	// Reset the voxel table
+	memset(v_table, 0, sizeof(unsigned int) * size_t(v_grid.dim_x) * size_t(v_grid.dim_y) * (size_t)(v_grid.dim_z));
 
 	std::cout << PROGRAM_NAME << "Starting CPU voxelization..." << std::endl;
 	auto start = std::chrono::high_resolution_clock::now();

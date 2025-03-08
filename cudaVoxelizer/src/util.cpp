@@ -49,6 +49,12 @@ void util::makeCube(Mesh::Mesh& m, const Vec3::Vec3 v) {
 	}
 }
 
+void util::saveObjGPU(const unsigned int* v_table, const Mesh::VoxelGrid& v_grid, const std::string filename) {
+	std::string new_filename = filename.substr(0, filename.find('.'));
+	new_filename += "_gpu.obj";
+	saveObj(v_table, v_grid, new_filename);
+}
+
 void util::saveObj(const unsigned int* v_table, const Mesh::VoxelGrid& v_grid, const std::string filename) {
 	Mesh::Mesh voxel_mesh{};
 	Mesh::Mesh cube{};
