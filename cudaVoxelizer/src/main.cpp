@@ -1,3 +1,5 @@
+//#define SHOW_TIME_ONLY
+
 #include "Vec3.h"
 #include "Mesh.h"
 
@@ -25,13 +27,19 @@ Mesh::VoxelGrid computeVoxelGrid(const Mesh::Mesh& m, const int size);
 int main(int argc, char *argv[]) {
 	std::string msg{};
 
-	if (argc != 3) {
-		std::cerr << PROGRAM_NAME << "ERROR::VOXELIZER::wrong number of parameters." << std::endl << "\tPlease insert 2 parameters" << std::endl;
+	if (argc != 4) {
+		std::cerr << PROGRAM_NAME << "ERROR::VOXELIZER::wrong number of parameters." << std::endl << "\tPlease insert 3 parameters" << std::endl;
 		return 1;
 	}
 
 	std::experimental::filesystem::path filepath{ argv[1] };
 	std::string vox_filename{ argv[2] };
+	int dim = std::stoi(std::string{ argv[3] });
+
+	if (dim <= 0) {
+		std::cerr << PROGRAM_NAME << "ERROR::VOXELIZER::invalid voxel grid dimension." << std::endl << "\tPlease insert a posive voxel grid dimension" << std::endl;
+		return 1;
+	}
 
 	std::cout << PROGRAM_NAME << "Loading mesh from " << filepath.filename().string() << "..." << std::endl;
 
@@ -46,7 +54,7 @@ int main(int argc, char *argv[]) {
 	std::cout << "\tNumber of verticies: " << m.vertices.size() << std::endl;
 
 	std::cout << PROGRAM_NAME << "Creating voxel grid..." << std::endl;
-	Mesh::VoxelGrid v_grid = computeVoxelGrid(m, 512);
+	Mesh::VoxelGrid v_grid = computeVoxelGrid(m, dim);
 	
 	unsigned int* v_table = (unsigned int*)calloc(size_t(v_grid.dim_x) * size_t(v_grid.dim_y) * (size_t)(v_grid.dim_z), sizeof(unsigned int));
 
@@ -55,9 +63,12 @@ int main(int argc, char *argv[]) {
 	kernelWrapper(m, v_grid, v_table, elapsed_time);
 	printf("%sGPU voxelization ended...\n\tElapsed time %.1f ms\n", PROGRAM_NAME.c_str(), elapsed_time);
 
+#ifndef SHOW_TIME_ONLY
 	std::cout << PROGRAM_NAME << "Saving voxel mesh as .obj..." << std::endl;
 	util::saveObjGPU(v_table, v_grid, vox_filename);
 	std::cout << PROGRAM_NAME << "Voxel mesh saved..." << std::endl;
+#endif // !SHOW_TIME_ONLY
+
 
 	// Reset the voxel table
 	memset(v_table, 0, sizeof(unsigned int) * size_t(v_grid.dim_x) * size_t(v_grid.dim_y) * (size_t)(v_grid.dim_z));
@@ -69,9 +80,11 @@ int main(int argc, char *argv[]) {
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	printf("%sCPU voxelization ended...\n\tElapsed time %I64d ms\n", PROGRAM_NAME.c_str(), duration);
 
+#ifndef SHOW_TIME_ONLY
 	std::cout << PROGRAM_NAME << "Saving voxel mesh as .obj..." << std::endl;
 	util::saveObj(v_table, v_grid, vox_filename);
 	std::cout << PROGRAM_NAME << "Voxel mesh saved..." << std::endl;
+#endif // !SHOW_TIME_ONLY
 
 	// Free the voxel table
 	free(v_table);

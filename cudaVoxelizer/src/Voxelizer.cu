@@ -17,7 +17,7 @@ inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort =
 }
 
 __global__ void voxelize(float* faces, int n_faces, size_t dim_x, size_t dim_y, size_t dim_z, unsigned int* v_table, float3 spacing, float3 bbox_min) {
-    int thread_idx = threadIdx.x + (blockDim.x * blockIdx.x);
+    size_t thread_idx = threadIdx.x + (blockDim.x * blockIdx.x);
 
     float3 delta_p = make_float3(spacing.x, spacing.y, spacing.z);
     int3 grid_size = make_int3(dim_x - 1, dim_y - 1, dim_z - 1);
@@ -132,7 +132,9 @@ __global__ void voxelize(float* faces, int n_faces, size_t dim_x, size_t dim_y, 
 
                     // Set the current voxel as intersected
                     size_t location = (size_t)x + ((size_t)y * dim_x) + ((size_t)z * dim_y * dim_x);
-                    v_table[location] = 1;
+                    atomicAdd(&v_table[location], 1);
+
+                    continue;
                 }
             }
         }
@@ -179,13 +181,15 @@ void kernelWrapper(Mesh::Mesh& m, const Mesh::VoxelGrid& v_grid, unsigned int* v
     gpuErrchk(cudaMemcpy(faces_d, faces, sizeof(float) * m.faces_idx.size() * 9, cudaMemcpyHostToDevice));
 
     // Compute the grid and block dimensions
-    dim3 block(32, 1, 1);
-    dim3 grid((m.faces_idx.size() + 32 - 1) / 32, 1, 1);
+    int minGridSize;
+    int blockSize;
+    cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, voxelize, 0, 0);
+    dim3 grid((m.faces_idx.size() + blockSize - 1) / blockSize);
 
     gpuErrchk(cudaEventRecord(start, 0));
 
     // Launch the voxelization kernel
-    voxelize <<<grid, block>>> (faces_d, m.faces_idx.size(), (size_t)v_grid.dim_x, (size_t)v_grid.dim_y, (size_t)v_grid.dim_z, v_table_d, make_float3(v_grid.spacing[0], v_grid.spacing[1], v_grid.spacing[2]), make_float3(v_grid.aabb.p_min[0], v_grid.aabb.p_min[1], v_grid.aabb.p_min[2]));
+    voxelize <<<grid, blockSize >>> (faces_d, m.faces_idx.size(), (size_t)v_grid.dim_x, (size_t)v_grid.dim_y, (size_t)v_grid.dim_z, v_table_d, make_float3(v_grid.spacing[0], v_grid.spacing[1], v_grid.spacing[2]), make_float3(v_grid.aabb.p_min[0], v_grid.aabb.p_min[1], v_grid.aabb.p_min[2]));
     gpuErrchk(cudaDeviceSynchronize());
     gpuErrchk(cudaEventRecord(end, 0));
     gpuErrchk(cudaEventSynchronize(end));

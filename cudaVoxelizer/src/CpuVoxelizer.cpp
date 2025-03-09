@@ -94,6 +94,8 @@ void CpuVoxelizer::voxelizeMesh(const Mesh::VoxelGrid& v_grid, Mesh::Mesh& m, un
 						// Set the current voxel as intersected
 						size_t location = (size_t)x + ((size_t)y * (size_t)v_grid.dim_y) + ((size_t)z * (size_t)v_grid.dim_y * (size_t)v_grid.dim_z);
 						v_table[location] = 1;
+
+						continue;
 					}
 				}
 			}
